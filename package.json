@@ -1,0 +1,30 @@
+{
+  "name": "zine-smart-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Patrn's unique zine NFT project.",
+  "main": "index.js",
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patrn-me/zine-smart-contracts.git"
+  },
+  "author": "lza_menace@patrn.me",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/patrn-me/zine-smart-contracts/issues"
+  },
+  "homepage": "https://github.com/patrn-me/zine-smart-contracts",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.3",
+    "dotenv": "^10.0.0",
+    "truffle": "^5.4.19",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "truffle-plugin-verify": "^0.5.18",
+    "web3": "^1.6.1"
+  },
+  "engines": {
+    "node": "^12.18.x"
+  }
+}
