@@ -24,7 +24,10 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
     bool merkleSet = false;
     bool public earlyAccessMode = true;
     bool public mintingIsActive = false;
-    string public baseURI = "ipfs://QmVe2GvB6Xzzv3UsRBh3feHprC9QS2mHZ1pu2Ayp9348ec/";
+    bool public reservedZines = false;
+    string public baseURI = "";
+    uint256 public randPrime;
+    uint256 public timestamp;
     uint256 public constant maxSupply = 1000;
     uint256 public constant maxMints = 2;
 
@@ -51,6 +54,13 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
             earlyAccessMode = false;
         } else {
             earlyAccessMode = true;
+        }
+    }
+
+    // Specify a randomly generated prime number (off-chain), only once
+    function setRandPrime(uint256 _randPrime) public onlyOwner {
+        if (randPrime == 0) {
+            randPrime = _randPrime;
         }
     }
 
@@ -93,8 +103,38 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
         claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
     }
 
+    // Internal mint function with proper "random-ish" logic
+    function _mintZines(uint256 numberOfTokens) private {
+        require(randPrime > 0, "Random prime number must be specified by contract operator before minting");
+        require(numberOfTokens > 0, "Must mint at least 1 token");
+
+        // Specify the block timestamp of the first mint to define NFT distribution
+        if (timestamp == 0) {
+            timestamp = block.timestamp;
+        }
+
+        // Mint i tokens where i is specified by function invoker
+        for(uint256 i = 0; i < numberOfTokens; i++) {
+            uint256 tokenIndex = tokensMinted() + 1; // Start at 1
+            uint256 seq = randPrime * tokenIndex;
+            uint256 seqOffset = seq + timestamp;
+            uint256 tokenId = (seqOffset % maxSupply) + 1; // Prevent tokenId 0
+            _safeMint(msg.sender, tokenId);
+            _tokenSupply.increment();
+        }
+    }
+
+    // Reserve some zines for giveaways
+    function reserveZines() public onlyOwner {
+        // Only allow one-time reservation
+        if (!reservedZines) {
+            _mintZines(20);
+            reservedZines = true;
+        }
+    }
+
     // Claim and mint tokens
-    function mintItem(
+    function mintZines(
       uint256 index,
       address account,
       uint256 amount,
@@ -102,38 +142,25 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
       uint256 numberOfTokens
     ) external {
         require(mintingIsActive, "Minting is not active.");
-        require(numberOfTokens > 0, "Must mint at least 1 token");
-        require(numberOfTokens <= maxMints, "Cannot mint more than 2 at a time");
+        require(numberOfTokens <= maxMints, "Cannot mint more than 2");
         require(tokensMinted().add(numberOfTokens) <= maxSupply, "Minting would exceed max supply");
+        require(balanceOf(msg.sender).add(numberOfTokens) <= maxMints, "Minting would exceed maximum amount of 2 tokens per wallet.");
 
         if (earlyAccessMode) {
             require(msg.sender == account, "Can only be claimed by the hodler");
             require(!isClaimed(index), "Drop already claimed");
             // Verify merkle proof
             bytes32 node = keccak256(abi.encodePacked(index, account, amount));
-            require(MerkleProof.verify(merkleProof, merkleRoot, node), "Invalid proof");
-            // Update the claimable amount for address
-            if (amountClaimable[msg.sender] == 0) {
-                amountClaimable[msg.sender] = amount;
-            }
-            // Ensure not trying to mint more than claimable
-            require(amountClaimed[msg.sender].add(numberOfTokens) <= amountClaimable[msg.sender], "Cannot mint more than what is claimable");
-        } else {
-            require(balanceOf(msg.sender).add(numberOfTokens) <= maxMints, "Minting would exceed maximum amount of 2 items per wallet.");
+            require(MerkleProof.verify(merkleProof, merkleRoot, node), "Invalid merkle proof");
         }
 
-        // Mint i tokens where i is specified by function invoker
-        for(uint256 i = 0; i < numberOfTokens; i++) {
-            _safeMint(msg.sender, tokensMinted().add(1));
-            _tokenSupply.increment();
-            if (earlyAccessMode) {
-                // Increment amount claimed counter while in earlyAccessMode
-                amountClaimed[msg.sender] = amountClaimed[msg.sender].add(1);
-                if (amountClaimed[msg.sender] == amountClaimable[msg.sender]) {
-                    // Mark it claimed
-                    _setClaimed(index);
-                }
-            }
+        _mintZines(numberOfTokens);
+
+        if ((earlyAccessMode) && (balanceOf(msg.sender) == maxMints) && (msg.sender != address(this))) {
+            // Mark whitelist as claimed if in whitelist mode,
+            // max mints are reached (2/2),
+            // and we're not contract owner
+            _setClaimed(index);
         }
     }
 

@@ -6,3 +6,5 @@ node_modules/
 data
 package-lock.json
 *.tar.gz
+output.json
+addr-to-claim.json

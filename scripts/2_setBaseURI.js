@@ -1,4 +1,4 @@
-const newURI = ''; // leave a note
+const newURI = 'ipfs://QmVQFrLx2o2bnP21EnbN696BssYUzR7MCmUKC15VVbshWy/'; // last known good hash
 
 module.exports = async function main(callback) {
   try {
