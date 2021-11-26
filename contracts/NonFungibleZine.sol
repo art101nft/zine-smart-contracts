@@ -14,11 +14,6 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenSupply;
 
-    // Track indexes (users) which have claimed their tokens
-    mapping(uint256 => uint256) private claimedBitMap;
-    mapping(address => uint256) private amountClaimable;
-    mapping(address => uint256) private amountClaimed;
-
     // Define starting contract state
     bytes32 merkleRoot;
     bool merkleSet = false;
@@ -87,25 +82,9 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
         return merkleSet;
     }
 
-    // Check if an index has claimed tokens
-    function isClaimed(uint256 index) public view returns (bool) {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
-    }
-
-    // Store if an index has claimed their tokens
-    function _setClaimed(uint256 index) private {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
-    }
-
     // Internal mint function with proper "random-ish" logic
     function _mintZines(uint256 numberOfTokens) private {
-        require(randPrime > 0, "Random prime number must be specified by contract operator before minting");
+        require(randPrime > 0, "Random prime number must be specified by contract owner before minting");
         require(numberOfTokens > 0, "Must mint at least 1 token");
 
         // Specify the block timestamp of the first mint to define NFT distribution
@@ -147,21 +126,14 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
         require(balanceOf(msg.sender).add(numberOfTokens) <= maxMints, "Minting would exceed maximum amount of 2 tokens per wallet.");
 
         if (earlyAccessMode) {
+            require(merkleSet, "Merkle root not set by contract owner");
             require(msg.sender == account, "Can only be claimed by the hodler");
-            require(!isClaimed(index), "Drop already claimed");
             // Verify merkle proof
             bytes32 node = keccak256(abi.encodePacked(index, account, amount));
             require(MerkleProof.verify(merkleProof, merkleRoot, node), "Invalid merkle proof");
         }
 
         _mintZines(numberOfTokens);
-
-        if ((earlyAccessMode) && (balanceOf(msg.sender) == maxMints) && (msg.sender != address(this))) {
-            // Mark whitelist as claimed if in whitelist mode,
-            // max mints are reached (2/2),
-            // and we're not contract owner
-            _setClaimed(index);
-        }
     }
 
     // Override the below functions from parent contracts
