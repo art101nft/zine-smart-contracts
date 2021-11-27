@@ -101,6 +101,11 @@ contract NonFungibleZine is ERC721, ERC721URIStorage, Ownable {
             _safeMint(msg.sender, tokenId);
             _tokenSupply.increment();
         }
+
+        // Disable minting if max supply of tokens is reached
+        if (tokensMinted() == maxSupply) {
+            mintingIsActive = false;
+        }
     }
 
     // Reserve some zines for giveaways
