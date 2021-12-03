@@ -38,6 +38,12 @@ module.exports = {
       version: "^0.8.0",
     }
   },
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
+  },
   plugins: [
     'truffle-plugin-verify'
   ],
