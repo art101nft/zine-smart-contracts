@@ -4,11 +4,10 @@ module.exports = async function main(callback) {
     const contract = await NonFungibleZine.deployed();
     const mintingIsActive = await contract.mintingIsActive();
     console.log(`[+] Toggling mintingIsActive. Currently: ${mintingIsActive}`);
+    await contract.toggleMinting();
     if (mintingIsActive) {
-      await contract.toggleMinting();
       console.log(`Minting disabled!`);
     } else {
-      await contract.toggleMinting();
       console.log(`Minting enabled!`);
     }
     callback(0);
